@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>VC Evaluator</title>
+
+<!-- PWA / iOS home-screen app -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="VC Evaluator" />
+<meta name="theme-color" content="#15503C" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0E1B17;
+    --pine:#15503C;
+    --pine-deep:#0F3B2C;
+    --brass:#C29A3C;
+    --brass-soft:#E7CE8C;
+    --paper:#E9EEE8;
+    --card:#FBFBF7;
+    --line:#D5DCD3;
+    --muted:#5E6B62;
+    --clay:#A8542B;
+    --principal:#2F6B53;
+    --tax:#C29A3C;
+    --income:#5E8C9E;
+    --ok:#2F6B53;
+    --warn:#A8542B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Inter",system-ui,sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    padding:clamp(14px,3vw,40px);
+    padding-top:calc(clamp(14px,3vw,40px) + env(safe-area-inset-top));
+    padding-bottom:calc(clamp(14px,3vw,40px) + env(safe-area-inset-bottom));
+    background-image:radial-gradient(circle at 1px 1px, rgba(21,80,60,0.05) 1px, transparent 0);
+    background-size:22px 22px;
+  }
+  .wrap{max-width:1060px;margin:0 auto;}
+
+  /* Header */
+  .masthead{
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:14px 14px 0 0;
+    padding:clamp(18px,3vw,30px) clamp(18px,3.4vw,34px);
+    position:relative;
+    overflow:hidden;
+  }
+  .masthead::after{
+    content:"₦";
+    position:absolute;
+    right:-14px;top:-34px;
+    font-family:"Space Grotesk",sans-serif;
+    font-size:190px;font-weight:700;
+    color:rgba(194,154,60,0.10);
+    line-height:1;
+  }
+  .eyebrow{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:0.22em;text-transform:uppercase;
+    color:var(--brass-soft);
+    margin:0 0 10px;
+  }
+  .masthead h1{
+    font-family:"Space Grotesk",sans-serif;
+    font-weight:600;
+    font-size:clamp(26px,5vw,40px);
+    line-height:1.02;
+    letter-spacing:-0.02em;
+    margin:0;
+    max-width:18ch;
+    position:relative;z-index:1;
+  }
+  .masthead p{
+    margin:12px 0 0;
+    max-width:58ch;
+    color:#C6D2C9;
+    font-size:14px;
+    position:relative;z-index:1;
+  }
+  .masthead .lawtag{
+    margin:16px 0 0;
+    display:inline-block;
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:0.03em;
+    color:var(--brass-soft);
+    background:rgba(194,154,60,0.12);
+    border:1px solid rgba(231,206,140,0.35);
+    border-radius:20px;
+    padding:5px 13px;
+    position:relative;z-index:1;
+  }
+  .masthead .lawtag b{color:#fff;font-weight:600;}
+
+  /* Body grid */
+  .panel{
+    border:1px solid var(--ink);border-top:none;
+    border-radius:0 0 14px 14px;
+    display:grid;
+    grid-template-columns:0.92fr 1.08fr;
+    overflow:hidden;
+  }
+  @media (max-width:780px){ .panel{grid-template-columns:1fr;} }
+
+  .col{padding:clamp(18px,3vw,30px) clamp(18px,3.2vw,32px);}
+  .col-inputs{background:var(--pine);color:#EAF1EC;}
+  .col-results{background:var(--card);}
+  @media (max-width:780px){ .col-inputs{border-bottom:1px solid var(--ink);} }
+
+  .col-title{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;letter-spacing:0.2em;text-transform:uppercase;
+    margin:0 0 18px;display:flex;align-items:center;gap:9px;
+  }
+  .col-inputs .col-title{color:var(--brass-soft);}
+  .col-results .col-title{color:var(--muted);}
+  .col-title::before{content:"";width:22px;height:1px;background:currentColor;opacity:0.6;}
+
+  /* Fields */
+  .field{margin-bottom:20px;}
+  .field > label{
+    display:block;font-size:13px;font-weight:600;margin-bottom:8px;
+  }
+  .field .hint{font-size:11.5px;font-weight:400;opacity:0.72;margin-left:2px;}
+
+  .amount-box{
+    display:flex;align-items:center;
+    background:rgba(255,255,255,0.96);
+    border:1px solid rgba(0,0,0,0.12);
+    border-radius:9px;overflow:hidden;
+  }
+  .amount-box .naira{
+    font-family:"JetBrains Mono",monospace;
+    padding:0 12px;color:var(--pine);font-weight:700;font-size:18px;
+    border-right:1px solid rgba(0,0,0,0.10);
+    align-self:stretch;display:flex;align-items:center;
+  }
+  .amount-box input{
+    border:none;background:transparent;flex:1;width:100%;
+    font-family:"JetBrains Mono",monospace;font-size:18px;font-weight:500;
+    color:var(--ink);padding:12px 12px;outline:none;min-width:0;
+  }
+  .pct-box{position:relative;}
+  .pct-box input{
+    width:100%;border:1px solid rgba(0,0,0,0.12);border-radius:9px;
+    background:rgba(255,255,255,0.96);
+    font-family:"JetBrains Mono",monospace;font-size:17px;font-weight:500;
+    color:var(--ink);padding:12px 30px 12px 12px;outline:none;
+  }
+  .pct-box .sfx{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    font-family:"JetBrains Mono",monospace;color:var(--muted);font-weight:600;
+    pointer-events:none;
+  }
+  input:focus{box-shadow:0 0 0 3px rgba(194,154,60,0.4);border-color:var(--brass);}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:4px;
+    background:rgba(255,255,255,0.28);margin-top:12px;outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:18px;height:18px;border-radius:50%;
+    background:var(--brass);border:2px solid #fff;cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,0.3);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:18px;height:18px;border-radius:50%;background:var(--brass);
+    border:2px solid #fff;cursor:pointer;
+  }
+
+  /* Segmented toggles */
+  .seg{display:flex;gap:4px;background:rgba(0,0,0,0.18);padding:4px;border-radius:10px;}
+  .seg button{
+    flex:1;border:none;background:transparent;color:#CFE0D5;
+    font-family:"Inter",sans-serif;font-size:12.5px;font-weight:600;
+    padding:9px 6px;border-radius:7px;cursor:pointer;transition:all .15s;
+  }
+  .seg button.on{background:var(--brass);color:var(--ink);}
+  .col-results .seg{background:var(--line);}
+  .col-results .seg button{color:var(--muted);}
+  .col-results .seg button.on{background:var(--pine);color:#fff;}
+
+  .time-row{display:flex;gap:10px;align-items:stretch;}
+  .time-row .amount-box{flex:1;}
+  .time-row .amount-box input{font-size:17px;}
+  .time-units{flex:0 0 auto;width:auto;}
+  .time-units .seg{flex-direction:row;}
+  .time-units .seg button{padding:9px 11px;}
+
+  .subfield{display:none;}
+  .subfield.show{display:block;}
+
+  /* Results */
+  .stmt-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding-bottom:14px;margin-bottom:18px;border-bottom:1.5px solid var(--ink);
+  }
+  .stmt-head .lbl{font-size:12px;color:var(--muted);font-weight:500;}
+  .stmt-head .val{
+    font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;color:var(--pine);
+  }
+
+  /* Value bar (signature) */
+  .valbar-wrap{margin-bottom:6px;}
+  .valbar-top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:9px;}
+  .valbar-top .cap{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+  .valbar-top .tot{
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(24px,4.4vw,32px);
+    color:var(--ink);letter-spacing:-0.01em;line-height:1;
+  }
+  .valbar{
+    display:flex;height:30px;border-radius:7px;overflow:hidden;
+    border:1px solid var(--ink);background:#fff;
+  }
+  .valbar .seg-bar{height:100%;transition:width .35s ease;min-width:0;}
+  .seg-principal{background:var(--principal);}
+  .seg-tax{background:var(--tax);}
+  .seg-income{background:var(--income);}
+  .valbar-keys{display:flex;flex-wrap:wrap;gap:14px;margin-top:11px;}
+  .vkey{display:flex;align-items:center;gap:7px;font-size:12px;}
+  .vkey .dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto;}
+  .vkey .kv{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--ink);}
+  .vkey .kl{color:var(--muted);}
+
+  /* Withdrawal gauge */
+  .gauge{
+    margin:22px 0 4px;padding:16px;border:1px dashed var(--brass);border-radius:11px;
+    background:linear-gradient(180deg,#FBF6E9,#FFFDF7);
+  }
+  .gauge .g-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+  .gauge .g-lbl{font-size:12px;font-weight:600;color:var(--clay);text-transform:uppercase;letter-spacing:0.06em;}
+  .gauge .g-sub{font-size:11px;color:var(--muted);}
+  .gauge .g-val{
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(22px,4vw,30px);
+    color:var(--ink);letter-spacing:-0.01em;margin:2px 0 10px;
+  }
+  .gtrack{height:9px;border-radius:6px;background:#EADFc4;overflow:hidden;}
+  .gfill{height:100%;background:var(--brass);border-radius:6px;transition:width .35s ease;}
+  .gtrack-lbl{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted);margin-top:6px;}
+
+  /* Withdrawal planner */
+  .wplan-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;}
+  .wplan-pct{
+    font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:15px;color:var(--clay);
+    background:#FBF0E4;border:1px solid #E8CBB5;border-radius:7px;padding:2px 9px;
+  }
+  .wslider{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;
+    background:linear-gradient(90deg,var(--brass) 0%,var(--brass) var(--fill,0%),#E6DEC9 var(--fill,0%),#E6DEC9 100%);
+    outline:none;margin:4px 0 2px;
+  }
+  .wslider::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;
+    background:var(--clay);border:3px solid #fff;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.3);
+  }
+  .wslider::-moz-range-thumb{
+    width:20px;height:20px;border-radius:50%;background:var(--clay);
+    border:3px solid #fff;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.3);
+  }
+  .wscale{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);margin-top:2px;}
+
+  /* Split bar: stays vs goes */
+  .splitbar{
+    display:flex;height:26px;border-radius:7px;overflow:hidden;border:1px solid var(--ink);
+    margin:16px 0 0;background:#fff;
+  }
+  .splitbar .s{height:100%;transition:width .3s ease;display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;}
+  .s-go{background:var(--clay);}
+  .s-stay{background:var(--pine);}
+  .splitkeys{display:flex;justify-content:space-between;margin-top:8px;gap:10px;}
+  .skey{font-size:11px;color:var(--muted);}
+  .skey b{display:block;font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ink);font-weight:700;}
+  .skey.right{text-align:right;}
+
+  /* Comparison rows */
+  .cmp{margin-top:18px;border:1px solid var(--line);border-radius:11px;overflow:hidden;}
+  .cmp-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line);}
+  .cmp-row:last-child{border-bottom:none;}
+  .cmp-row .c-lbl{font-size:12.5px;color:var(--ink);}
+  .cmp-row .c-lbl small{display:block;color:var(--muted);font-size:10.5px;margin-top:1px;}
+  .cmp-row .c-val{font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:500;text-align:right;white-space:nowrap;}
+  .cmp-row .c-pct{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--clay);font-weight:700;margin-left:6px;}
+  .cmp-row.head{background:#F3F1EA;}
+  .cmp-row.head .c-lbl{font-weight:700;}
+  .cmp-row.head .c-val{font-weight:700;color:var(--ink);}
+  .mini{height:7px;border-radius:5px;background:#E6DEC9;overflow:hidden;margin-top:8px;display:flex;}
+  .mini .mfill{height:100%;}
+  .mini .mfill.a{background:var(--principal);}
+  .mini .mfill.b{background:var(--income);}
+
+  /* Recovery of initial deposit */
+  .rec{margin-top:20px;}
+  .rec h3{
+    font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 4px;font-weight:500;
+  }
+  .rec .rec-sub{font-size:11.5px;color:var(--muted);margin:0 0 12px;}
+  .recbar{display:flex;height:30px;border-radius:7px;overflow:hidden;border:1px solid var(--ink);background:#fff;}
+  .recbar .rseg{height:100%;transition:width .3s ease;min-width:0;}
+  .rseg-tax{background:var(--tax);}
+  .rseg-prin{background:var(--clay);}
+  .rseg-inc{background:var(--income);}
+  .rseg-unrec{background:#CDD3C9;}
+  .reckeys{display:flex;flex-wrap:wrap;gap:7px 16px;margin-top:11px;}
+  .rkey{display:flex;align-items:center;gap:7px;font-size:11.5px;}
+  .rkey .dot{width:10px;height:10px;border-radius:3px;flex:0 0 auto;}
+  .rkey .kv{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--ink);}
+  .rkey .kl{color:var(--muted);}
+  .rec-summary{display:flex;gap:10px;margin-top:14px;}
+  .rec-card{flex:1;border:1px solid var(--line);border-radius:11px;padding:12px 14px;}
+  .rec-card.recd{background:#EAF3ED;border-color:#BBD8C6;}
+  .rec-card.unrec{background:#F4F0EA;border-color:#E2D6BE;}
+  .rec-card .rc-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);}
+  .rec-card .rc-val{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(19px,3.4vw,23px);color:var(--ink);margin-top:3px;line-height:1;}
+  .rec-card .rc-pct{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;margin-top:5px;}
+  .rec-card.recd .rc-pct{color:var(--pine);}
+  .rec-card.unrec .rc-pct{color:var(--clay);}
+
+  /* Unrecovered VC inflation indicator */
+  .infl-card{
+    margin-top:16px;border:1px solid var(--line);border-left:3px solid var(--brass);
+    border-radius:11px;background:#FBFAF5;padding:14px 16px;
+  }
+  .ic-row{display:flex;align-items:center;gap:14px;}
+  .ic-half{min-width:0;}
+  .ic-right{text-align:right;margin-left:auto;}
+  .ic-lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);}
+  .ic-val{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(18px,3.4vw,22px);color:var(--ink);margin-top:3px;line-height:1.05;}
+  .ic-sub{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.4;}
+  .ic-arrow{color:var(--brass);font-size:20px;font-weight:700;flex:0 0 auto;}
+  @media(max-width:430px){ .ic-arrow{display:none;} .ic-row{gap:10px;} }
+
+  /* Statement rows */
+  .rows{margin-top:22px;}
+  .rows h3{
+    font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 6px;font-weight:500;
+  }
+  .row{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    padding:11px 0;border-bottom:1px solid var(--line);
+  }
+  .row:last-child{border-bottom:none;}
+  .row .r-lbl{font-size:13.5px;color:var(--ink);}
+  .row .r-lbl small{display:block;color:var(--muted);font-size:11px;margin-top:1px;}
+  .row .r-val{
+    font-family:"JetBrains Mono",monospace;font-weight:500;font-size:15px;color:var(--ink);
+    white-space:nowrap;text-align:right;
+  }
+  .row.tax .r-val{color:var(--clay);}
+  .row.good .r-val{color:var(--pine);}
+  .row.total{border-top:1.5px solid var(--ink);border-bottom:none;margin-top:4px;padding-top:14px;}
+  .row.total .r-lbl{font-weight:700;font-size:14.5px;}
+  .row.total .r-val{font-weight:700;font-size:18px;color:var(--pine);}
+  .row .pct-tag{
+    font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);
+    margin-left:8px;font-weight:400;
+  }
+
+  /* Status banner */
+  .status{
+    display:flex;gap:11px;align-items:flex-start;
+    padding:13px 15px;border-radius:11px;margin-bottom:20px;font-size:13px;
+    border:1px solid;
+  }
+  .status .ic{
+    flex:0 0 auto;width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono",monospace;font-weight:700;font-size:13px;color:#fff;margin-top:1px;
+  }
+  .status strong{display:block;margin-bottom:1px;}
+  .status.s-ok{background:#EAF3ED;border-color:#BBD8C6;color:#1f4a37;}
+  .status.s-ok .ic{background:var(--ok);}
+  .status.s-warn{background:#FBEEE6;border-color:#E8CBB5;color:#7d3f1e;}
+  .status.s-warn .ic{background:var(--warn);}
+  .status.s-block{background:#F0EFEA;border-color:#D5D2C6;color:#54514a;}
+  .status.s-block .ic{background:#8b8676;}
+
+  /* Footnotes */
+  .notes{
+    margin-top:18px;padding-top:16px;border-top:1px solid var(--line);
+    font-size:11.5px;color:var(--muted);line-height:1.65;
+  }
+  .notes b{color:var(--ink);font-weight:600;}
+  .notes ul{margin:6px 0 0;padding-left:16px;}
+  .notes li{margin-bottom:3px;}
+
+  .credit{text-align:center;font-size:11px;color:var(--muted);margin:16px 0 0;font-family:"JetBrains Mono",monospace;letter-spacing:0.04em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">RSA · Voluntary Contribution</p>
+    <h1>Is your voluntary contribution worth it?</h1>
+    <p>Enter a proposed voluntary contribution (VC) to your Retirement Savings Account and see the tax you save up front, the income it earns, how much you can pull out after 91 days, and what tax (if any) applies when you do.</p>
+    <p class="lawtag">Evaluated under the <b>Nigeria Tax Act, 2025</b> · effective 1 Jan 2026</p>
+  </header>
+
+  <div class="panel">
+
+    <!-- INPUTS -->
+    <section class="col col-inputs">
+      <p class="col-title">Your inputs</p>
+
+      <div class="field">
+        <label for="amt">Voluntary contribution <span class="hint">deducted from pay</span></label>
+        <div class="amount-box">
+          <span class="naira">₦</span>
+          <input id="amt" type="text" inputmode="numeric" value="500,000" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="rate">Marginal tax rate <span class="hint">rate on your top naira of income</span></label>
+        <div class="pct-box">
+          <input id="rate" type="text" inputmode="decimal" value="24.5" />
+          <span class="sfx">%</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="ret">Expected annual return <span class="hint">growth on the RSA</span></label>
+        <div class="pct-box">
+          <input id="ret" type="text" inputmode="decimal" value="14.5" />
+          <span class="sfx">%</span>
+        </div>
+        <input id="retRange" type="range" min="0" max="35" step="0.5" value="14.5" />
+      </div>
+
+      <div class="field">
+        <label for="infl">Inflation rate <span class="hint">erodes real value over time</span></label>
+        <div class="pct-box">
+          <input id="infl" type="text" inputmode="decimal" value="16" />
+          <span class="sfx">%</span>
+        </div>
+        <input id="inflRange" type="range" min="0" max="40" step="0.5" value="16" />
+      </div>
+
+      <div class="field" style="margin-bottom:6px;">
+        <label for="dur">Time before you withdraw</label>
+        <div class="time-row">
+          <div class="amount-box">
+            <input id="dur" type="text" inputmode="numeric" value="6" style="font-weight:600;" />
+          </div>
+          <div class="time-units">
+            <div class="seg" id="durUnit">
+              <button data-u="days">Days</button>
+              <button data-u="months" class="on">Months</button>
+              <button data-u="years">Years</button>
+            </div>
+          </div>
+        </div>
+        <div class="hint" id="durEcho" style="margin-top:9px;opacity:0.78;"></div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="col col-results">
+      <p class="col-title">Evaluation</p>
+
+      <div class="stmt-head">
+        <span class="lbl">Contribution under review</span>
+        <span class="val" id="hContrib">₦500,000</span>
+      </div>
+
+      <div class="status" id="status"></div>
+
+      <div class="valbar-wrap">
+        <div class="valbar-top">
+          <span class="cap">Total value this VC creates for you</span>
+          <span class="tot" id="totalValue">₦0</span>
+        </div>
+        <div class="valbar" id="valbar">
+          <div class="seg-bar seg-principal" id="bPrincipal"></div>
+          <div class="seg-bar seg-tax" id="bTax"></div>
+          <div class="seg-bar seg-income" id="bIncome"></div>
+        </div>
+        <div class="valbar-keys">
+          <span class="vkey"><span class="dot" style="background:var(--principal)"></span><span class="kv" id="kPrincipal">₦0</span> <span class="kl">your contribution</span></span>
+          <span class="vkey"><span class="dot" style="background:var(--tax)"></span><span class="kv" id="kTax">₦0</span> <span class="kl">tax saved</span></span>
+          <span class="vkey"><span class="dot" style="background:var(--income)"></span><span class="kv" id="kIncome">₦0</span> <span class="kl">income earned</span></span>
+        </div>
+      </div>
+
+      <div class="gauge">
+        <div class="wplan-head">
+          <span class="g-lbl">Plan your withdrawal</span>
+          <span class="wplan-pct" id="wPctTag">50% of pot</span>
+        </div>
+        <div class="g-val" id="maxWithdraw">₦0</div>
+        <input id="wRange" class="wslider" type="range" min="0" max="50" step="1" value="50" />
+        <div class="wscale"><span>0%</span><span>50% cap →</span></div>
+        <div class="gtrack-lbl" style="margin-top:9px;"><span id="wComp">includes ₦0 of your VC + ₦0 income</span><span id="potLbl">pot ₦0</span></div>
+
+        <div class="splitbar">
+          <div class="s s-go" id="sGo"></div>
+          <div class="s s-stay" id="sStay"></div>
+        </div>
+        <div class="splitkeys">
+          <span class="skey"><b id="kGo">₦0</b>cashed out · <span id="kGoPct">50%</span> of pot</span>
+          <span class="skey right"><b id="kStay">₦0</b>stays invested · <span id="kStayPct">50%</span> of pot</span>
+        </div>
+      </div>
+
+      <div class="cmp">
+        <div class="cmp-row head">
+          <span class="c-lbl">Your original contribution</span>
+          <span class="c-val" id="cVC">₦0</span>
+        </div>
+        <div class="cmp-row">
+          <span class="c-lbl">Withdrawn from your VC <small>principal you cash out</small></span>
+          <span class="c-val"><span id="cVCgo">₦0</span><span class="c-pct" id="cVCgoPct">50%</span></span>
+        </div>
+        <div class="cmp-row">
+          <span class="c-lbl">Not withdrawn <small>your VC that stays in the RSA</small></span>
+          <span class="c-val"><span id="cVCstay">₦0</span><span class="c-pct" id="cVCstayPct">50%</span></span>
+        </div>
+      </div>
+
+      <div class="rec">
+        <h3>Recovery of initial deposit</h3>
+        <p class="rec-sub">How much of your ₦<span id="recDep">0</span> contribution you've recovered — through tax saved, principal withdrawn, and income withdrawn.</p>
+        <div class="recbar">
+          <div class="rseg rseg-tax" id="recTax"></div>
+          <div class="rseg rseg-prin" id="recPrin"></div>
+          <div class="rseg rseg-inc" id="recInc"></div>
+          <div class="rseg rseg-unrec" id="recUnrec"></div>
+        </div>
+        <div class="reckeys">
+          <span class="rkey"><span class="dot" style="background:var(--tax)"></span><span class="kv" id="rkTax">₦0</span> <span class="kl">tax saved</span></span>
+          <span class="rkey"><span class="dot" style="background:var(--clay)"></span><span class="kv" id="rkPrin">₦0</span> <span class="kl">principal withdrawn</span></span>
+          <span class="rkey"><span class="dot" style="background:var(--income)"></span><span class="kv" id="rkInc">₦0</span> <span class="kl">income withdrawn</span></span>
+          <span class="rkey"><span class="dot" style="background:#CDD3C9"></span><span class="kv" id="rkUnrec">₦0</span> <span class="kl">unrecovered</span></span>
+        </div>
+        <div class="rec-summary">
+          <div class="rec-card recd">
+            <div class="rc-lbl">Recovered</div>
+            <div class="rc-val" id="recTotal">₦0</div>
+            <div class="rc-pct" id="recTotalPct">0% of deposit</div>
+          </div>
+          <div class="rec-card unrec">
+            <div class="rc-lbl">Unrecovered</div>
+            <div class="rc-val" id="recUnVal">₦0</div>
+            <div class="rc-pct" id="recUnPct">0% of deposit</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rows">
+        <h3>Value extracted</h3>
+        <div class="row good">
+          <span class="r-lbl">Tax saved on contribution <small>not taxed when deducted from payroll</small></span>
+          <span class="r-val" id="rTax">₦0<span class="pct-tag" id="rTaxRate"></span></span>
+        </div>
+        <div class="row good">
+          <span class="r-lbl">Income earned to date <small id="rIncSub">growth on the contribution</small></span>
+          <span class="r-val" id="rIncome">₦0</span>
+        </div>
+        <div class="row">
+          <span class="r-lbl">Pot at withdrawal <small>contribution + income earned</small></span>
+          <span class="r-val" id="rPot">₦0</span>
+        </div>
+        <div class="row">
+          <span class="r-lbl">Max withdrawal cap (50%) <small>most you may access after 91 days</small></span>
+          <span class="r-val" id="rMax">₦0</span>
+        </div>
+        <div class="row tax">
+          <span class="r-lbl">Tax on this withdrawal <small id="rEarlySub">on the income portion withdrawn</small></span>
+          <span class="r-val" id="rEarly">₦0</span>
+        </div>
+        <div class="row good">
+          <span class="r-lbl">Net cash from this withdrawal <small>after any withdrawal tax</small></span>
+          <span class="r-val" id="rNetCash">₦0</span>
+        </div>
+        <div class="row total">
+          <span class="r-lbl">Total value created</span>
+          <span class="r-val" id="rTotal">₦0<span class="pct-tag" id="rTotalPct"></span></span>
+        </div>
+      </div>
+
+      <div class="infl-card">
+        <div class="ic-row">
+          <div class="ic-half">
+            <div class="ic-lbl">Unrecovered VC, today</div>
+            <div class="ic-val" id="uvNow">₦0</div>
+            <div class="ic-sub" id="uvPct">0% of deposit</div>
+          </div>
+          <div class="ic-arrow">→</div>
+          <div class="ic-half ic-right">
+            <div class="ic-lbl">Retained depreciates in</div>
+            <div class="ic-val" id="uvYears">—</div>
+            <div class="ic-sub" id="uvNote">to the unrecovered value, in real terms</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <b>How this is worked out</b>
+        <ul>
+          <li><b>Tax saved</b> = the VC escapes income tax when deducted from payroll. Pension contributions remain an eligible deduction under the Nigeria Tax Act, 2025 (effective 1 January 2026), which consolidated the former Personal Income Tax Act.</li>
+          <li><b>Income</b> assumes annual compounding at your expected return, pro-rated for the holding period.</li>
+          <li><b>Withdrawal:</b> half of (contribution + income) is accessible from <b>91 days</b> after contributing.</li>
+          <li><b>Withdrawal tax:</b> the income portion you take out is taxed if withdrawn <b>under 12 months</b> from contribution; from 12 months on, it is tax-free.</li>
+        </ul>
+        <p style="margin:10px 0 0;">Estimates only — not financial or tax advice. Confirm specifics with your Pension Fund Administrator.</p>
+      </div>
+    </section>
+
+  </div>
+  <p class="credit">VC EVALUATOR · NIGERIA RSA</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- helpers ----
+  function naira(n){
+    var v = Math.round(n);
+    return "₦" + v.toLocaleString("en-NG");
+  }
+  function parseNum(str){
+    if(str == null) return 0;
+    var n = parseFloat(String(str).replace(/[^0-9.]/g,""));
+    return isNaN(n) ? 0 : n;
+  }
+  function fmtThousands(n){
+    if(n === "" || n == null) return "";
+    return Number(n).toLocaleString("en-NG");
+  }
+  function $(id){ return document.getElementById(id); }
+  var state = {
+    amt: 500000,
+    rate: 24.5,
+    ret: 14.5,
+    infl: 16,
+    dur: 6,
+    durUnit: "months",
+    withdrawPct: 50
+  };
+
+  // ---- element refs ----
+  var el = {
+    amt:$("amt"),
+    rate:$("rate"),
+    ret:$("ret"), retRange:$("retRange"),
+    infl:$("infl"), inflRange:$("inflRange"),
+    dur:$("dur"), durEcho:$("durEcho"),
+    wRange:$("wRange")
+  };
+
+  // ---- compute + render ----
+  function compute(){
+    var C = state.amt;
+    var r = state.ret / 100;
+
+    // holding period -> days, months, years (kept consistent: 1 year = 12 months = 365 days)
+    var days, monthsExact;
+    if(state.durUnit === "days"){ days = state.dur; monthsExact = state.dur * 12 / 365; }
+    else if(state.durUnit === "years"){ days = state.dur * 365; monthsExact = state.dur * 12; }
+    else { days = state.dur * 365 / 12; monthsExact = state.dur; }
+    var years = days / 365;
+
+    // tax saving from the marginal rate
+    var effRate = state.rate / 100;
+    var taxSaved = C * effRate;
+
+    // income earned (annual compounding, pro-rated)
+    var income = C * (Math.pow(1 + r, years) - 1);
+    if(!isFinite(income) || income < 0) income = 0;
+
+    var pot = C + income;
+    var maxCap = 0.5 * pot;                 // 50% statutory cap
+
+    var eligible = days >= 91;
+    var taxFree = monthsExact >= 12;
+
+    // user-chosen withdrawal as a fraction of the whole pot (slider, 0–50%)
+    var w = state.withdrawPct / 100;
+    var withdrawalAmt = w * pot;
+    var principalWithdrawn = w * C;          // pro-rata slice of the principal
+    var incomeWithdrawn = w * income;        // pro-rata slice of the income
+
+    var vcStay = C - principalWithdrawn;     // part of original VC NOT withdrawn
+    var incomeStay = income - incomeWithdrawn;
+    var amountLeft = pot - withdrawalAmt;    // total balance remaining in the RSA
+
+    // tax on the income portion actually withdrawn (only if early & eligible)
+    var earlyTax = (!taxFree && eligible) ? incomeWithdrawn * effRate : 0;
+    var netCash = eligible ? (withdrawalAmt - earlyTax) : 0;
+
+    // retained VC measured against the balance left behind
+    var retainedVsLeftPct = amountLeft > 0 ? (vcStay / amountLeft) : 0;
+
+    var totalValue = C + taxSaved + income;          // economic value stack
+    var valueCreated = taxSaved + income - earlyTax; // benefit beyond your own money, net of early tax
+    var valuePct = C > 0 ? valueCreated / C : 0;
+
+    render({
+      C:C, taxSaved:taxSaved, effRate:effRate, income:income, pot:pot,
+      maxCap:maxCap, eligible:eligible, taxFree:taxFree,
+      w:w, withdrawalAmt:withdrawalAmt, principalWithdrawn:principalWithdrawn, incomeWithdrawn:incomeWithdrawn,
+      vcStay:vcStay, incomeStay:incomeStay, amountLeft:amountLeft, retainedVsLeftPct:retainedVsLeftPct,
+      earlyTax:earlyTax, netCash:netCash, totalValue:totalValue,
+      valueCreated:valueCreated, valuePct:valuePct,
+      ret:r, infl:state.infl/100,
+      days:days, monthsExact:monthsExact, years:years
+    });
+  }
+
+  function render(d){
+    $("hContrib").textContent = naira(d.C);
+
+    // value bar
+    $("totalValue").textContent = naira(d.totalValue);
+    var tv = d.totalValue || 1;
+    $("bPrincipal").style.width = (100 * d.C / tv) + "%";
+    $("bTax").style.width = (100 * d.taxSaved / tv) + "%";
+    $("bIncome").style.width = (100 * d.income / tv) + "%";
+    $("kPrincipal").textContent = naira(d.C);
+    $("kTax").textContent = naira(d.taxSaved);
+    $("kIncome").textContent = naira(d.income);
+
+    // ---- withdrawal planner ----
+    var pctTxt = Math.round(d.w*100);
+    $("wPctTag").textContent = pctTxt + "% of pot";
+    $("maxWithdraw").textContent = d.eligible ? naira(d.withdrawalAmt) : "Locked";
+    el.wRange.style.setProperty("--fill", (d.w*100*2) + "%"); // slider is 0–50, scale to 0–100 track
+    $("wComp").textContent = "includes " + naira(d.principalWithdrawn) + " of your VC + " + naira(d.incomeWithdrawn) + " income";
+    $("potLbl").textContent = "pot " + naira(d.pot);
+
+    // split bar: cashed out vs stays invested (as % of pot)
+    var goPct = d.w*100, stayPct = 100 - goPct;
+    $("sGo").style.width = goPct + "%";
+    $("sStay").style.width = stayPct + "%";
+    $("sGo").textContent = goPct >= 10 ? Math.round(goPct)+"%" : "";
+    $("sStay").textContent = stayPct >= 10 ? Math.round(stayPct)+"%" : "";
+    $("kGo").textContent = naira(d.withdrawalAmt);
+    $("kGoPct").textContent = Math.round(goPct) + "%";
+    $("kStay").textContent = naira(d.amountLeft);
+    $("kStayPct").textContent = Math.round(stayPct) + "%";
+
+    // comparison: original VC kept vs cashed out
+    $("cVC").textContent = naira(d.C);
+    $("cVCgo").textContent = naira(d.principalWithdrawn);
+    $("cVCgoPct").textContent = Math.round(d.w*100) + "%";
+    $("cVCstay").textContent = naira(d.vcStay);
+    $("cVCstayPct").textContent = Math.round((1-d.w)*100) + "%";
+
+    // ---- recovery of initial deposit ----
+    // recovery = tax saved + withdrawn principal + withdrawn income (withdrawals only count if eligible)
+    $("recDep").textContent = Math.round(d.C).toLocaleString("en-NG");
+    var recTaxAmt = d.taxSaved;
+    var recPrin = d.eligible ? d.principalWithdrawn : 0;
+    var recInc  = d.eligible ? d.incomeWithdrawn  : 0;
+    var recovered = recTaxAmt + recPrin + recInc;
+    var recFrac = d.C > 0 ? recovered / d.C : 0;
+    var unrec = Math.max(0, d.C - recovered);
+    var unrecFrac = d.C > 0 ? unrec / d.C : 0;
+
+    // bar widths as % of deposit; if over-recovered, normalise the three segments to fill 100%
+    var base = recFrac > 1 ? recovered : d.C;
+    $("recTax").style.width   = (100 * recTaxAmt / base) + "%";
+    $("recPrin").style.width  = (100 * recPrin / base) + "%";
+    $("recInc").style.width   = (100 * recInc / base) + "%";
+    $("recUnrec").style.width = recFrac > 1 ? "0%" : (100 * unrec / d.C) + "%";
+
+    $("rkTax").textContent   = naira(recTaxAmt);
+    $("rkPrin").textContent  = naira(recPrin);
+    $("rkInc").textContent   = naira(recInc);
+    $("rkUnrec").textContent = naira(unrec);
+
+    $("recTotal").textContent    = naira(recovered);
+    $("recTotalPct").textContent = (recFrac*100).toFixed(0) + "% of deposit";
+    $("recUnVal").textContent    = naira(unrec);
+    $("recUnPct").textContent    = unrecFrac > 0 ? (unrecFrac*100).toFixed(0) + "% of deposit" : "fully recovered";
+
+    // ---- unrecovered VC: current value, retained-vs-unrecovered ratio, real-terms depreciation timeline ----
+    var U = unrec;
+    var retTxt = (d.ret*100).toFixed(1).replace(/\.0$/,"");
+    var inflTxt = (d.infl*100).toFixed(1).replace(/\.0$/,"");
+    // amount still sitting in the VC (full pot if withdrawal not yet allowed)
+    var amtLeft = d.eligible ? d.amountLeft : d.pot;
+    var retVsUnrec = U > 0 ? amtLeft / U : 0;
+    var realFactor = (1 + d.infl) > 0 ? (1 + d.ret) / (1 + d.infl) : 1; // real annual multiplier
+
+    $("uvNow").textContent = naira(U);
+    $("uvPct").textContent = (d.C > 0 ? (U/d.C*100).toFixed(0) : 0) + "% of deposit · Retained is "
+      + (U > 0 ? Math.round(retVsUnrec*100) : 0) + "% of it";
+
+    if(U <= 0){
+      $("uvYears").textContent = "—";
+      $("uvNote").textContent = "deposit fully recovered";
+    } else if(amtLeft <= U){
+      $("uvYears").textContent = "Now";
+      $("uvNote").textContent = "Retained already at the unrecovered level";
+    } else if(realFactor >= 1){
+      $("uvYears").textContent = "—";
+      $("uvNote").textContent = "holds real value — " + retTxt + "% return meets " + inflTxt + "% inflation";
+    } else {
+      // years for amtLeft to fall (in today's money) to U: amtLeft*realFactor^t = U
+      var t = Math.log(U / amtLeft) / Math.log(realFactor);
+      var tTxt;
+      if(t < 1) tTxt = Math.max(1, Math.round(t*12)) + " mo";
+      else if(t < 100) tTxt = (t < 10 ? t.toFixed(1) : Math.round(t)) + " yrs";
+      else tTxt = "100+ yrs";
+      $("uvYears").textContent = tTxt;
+      $("uvNote").textContent = naira(amtLeft) + " → " + naira(U) + " at " + retTxt + "% vs " + inflTxt + "% inflation";
+    }
+
+    // rows
+    $("rTax").firstChild.textContent = naira(d.taxSaved);
+    $("rTaxRate").textContent = " @ " + (d.effRate*100).toFixed(1).replace(/\.0$/,"") + "%";
+    $("rIncome").textContent = naira(d.income);
+    $("rIncSub").textContent = d.years >= 1
+      ? "compounded over " + d.years.toFixed(2).replace(/\.?0+$/,"") + " yr"
+      : "over " + Math.round(d.days) + " days";
+    $("rPot").textContent = naira(d.pot);
+    $("rMax").textContent = naira(d.maxCap);
+    $("rEarly").textContent = d.earlyTax > 0 ? "−" + naira(d.earlyTax) : naira(0);
+    $("rEarlySub").textContent = d.taxFree
+      ? "0% — held 12 months or more"
+      : (d.eligible ? "income taxed at " + (d.effRate*100).toFixed(1).replace(/\.0$/,"") + "%" : "withdrawal not yet allowed");
+    $("rNetCash").textContent = d.eligible ? naira(d.netCash) : "₦0";
+    $("rTotal").firstChild.textContent = naira(d.valueCreated);
+    $("rTotalPct").textContent = " · +" + (d.valuePct*100).toFixed(0) + "% of VC";
+
+    // status banner
+    var s = $("status");
+    var mTxt = d.monthsExact >= 1 ? d.monthsExact.toFixed(1).replace(/\.0$/,"") + " months" : Math.round(d.days) + " days";
+    if(!d.eligible){
+      s.className = "status s-block";
+      s.innerHTML = '<span class="ic">!</span><span><strong>Not withdrawable yet</strong>At '+mTxt+', you are inside the 91-day lock-in. The contribution still earns the tax saving and income now.</span>';
+    } else if(!d.taxFree){
+      s.className = "status s-warn";
+      s.innerHTML = '<span class="ic">₦</span><span><strong>Withdrawable — income is taxable</strong>At '+mTxt+' (under 12 months), the income portion you withdraw is taxed. Waiting until 12 months makes it tax-free.</span>';
+    } else {
+      s.className = "status s-ok";
+      s.innerHTML = '<span class="ic">✓</span><span><strong>Withdrawable and tax-free</strong>At '+mTxt+' (12 months or more), you can withdraw the accessible half with no tax on the income.</span>';
+    }
+
+    // duration echo
+    el.durEcho.textContent = "= " + Math.round(d.days) + " days · 91-day lock " +
+      (d.days>=91?"cleared":"not cleared") + " · 12-month tax-free " +
+      (d.monthsExact>=12?"reached":"not reached");
+  }
+
+  // ---- input wiring ----
+  el.amt.addEventListener("input", function(){
+    state.amt = parseNum(this.value);
+    compute();
+  });
+  el.amt.addEventListener("blur", function(){ el.amt.value = fmtThousands(state.amt); });
+
+  el.rate.addEventListener("input", function(){ state.rate = parseNum(this.value); compute(); });
+
+  el.ret.addEventListener("input", function(){
+    state.ret = parseNum(this.value);
+    el.retRange.value = Math.min(35, Math.max(0, state.ret));
+    compute();
+  });
+  el.retRange.addEventListener("input", function(){
+    state.ret = parseNum(this.value);
+    el.ret.value = state.ret;
+    compute();
+  });
+
+  el.infl.addEventListener("input", function(){
+    state.infl = parseNum(this.value);
+    el.inflRange.value = Math.min(40, Math.max(0, state.infl));
+    compute();
+  });
+  el.inflRange.addEventListener("input", function(){
+    state.infl = parseNum(this.value);
+    el.infl.value = state.infl;
+    compute();
+  });
+
+  el.dur.addEventListener("input", function(){ state.dur = parseNum(this.value); compute(); });
+
+  el.wRange.addEventListener("input", function(){
+    state.withdrawPct = Math.min(50, Math.max(0, parseNum(this.value)));
+    compute();
+  });
+
+  // duration unit toggle
+  document.querySelectorAll("#durUnit button").forEach(function(b){
+    b.addEventListener("click", function(){
+      document.querySelectorAll("#durUnit button").forEach(function(x){x.classList.remove("on");});
+      this.classList.add("on");
+      state.durUnit = this.dataset.u;
+      compute();
+    });
+  });
+
+  // init
+  el.amt.value = fmtThousands(state.amt);
+  compute();
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function(){ /* offline unavailable, app still works online */ });
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "VC Evaluator — Nigerian Pension",
+  "short_name": "VC Evaluator",
+  "description": "Evaluate the tax, income, withdrawal and recovery value of a voluntary contribution to your Nigerian RSA.",
+  "start_url": "index.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15503C",
+  "theme_color": "#15503C",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
