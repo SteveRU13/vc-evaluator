@@ -403,6 +403,58 @@
   .notes li{margin-bottom:3px;}
 
   .credit{text-align:center;font-size:11px;color:var(--muted);margin:16px 0 0;font-family:"JetBrains Mono",monospace;letter-spacing:0.04em;}
+
+  /* Tools: save / compare / share */
+  .tools{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
+  .tool-btns{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px;}
+  .tbtn{
+    flex:1 1 auto;min-height:46px;padding:0 14px;border-radius:11px;cursor:pointer;
+    font-family:"Inter",sans-serif;font-size:14px;font-weight:600;
+    border:1.5px solid var(--pine);background:#fff;color:var(--pine);
+    -webkit-tap-highlight-color:transparent;transition:transform .08s ease, background .15s;
+  }
+  .tbtn:active{transform:scale(0.97);}
+  .tbtn.primary{background:var(--pine);color:#fff;border-color:var(--pine);}
+  .tbtn.primary:active{background:var(--pine-deep);}
+  .scen-empty{font-size:12.5px;color:var(--muted);line-height:1.5;padding:6px 2px;}
+  .scen-list{display:flex;flex-direction:column;gap:9px;}
+  .scen-row{
+    display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:11px;
+    padding:11px 13px;background:var(--card);
+  }
+  .scen-row .sc-main{flex:1;min-width:0;cursor:pointer;}
+  .scen-row .sc-name{font-size:14px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .scen-row .sc-sub{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);margin-top:2px;}
+  .scen-row .sc-val{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:var(--pine);text-align:right;white-space:nowrap;}
+  .scen-row .sc-del{
+    flex:0 0 auto;width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;
+    background:#F3EEE8;color:var(--clay);font-size:16px;line-height:1;
+  }
+  .scen-row .sc-del:active{background:#e9ddd3;}
+  .scen-compare-wrap{margin-top:16px;}
+  .scen-compare-title{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .scen-compare-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:11px;}
+  #scenCompare{border-collapse:collapse;width:100%;font-size:12px;min-width:340px;}
+  #scenCompare th,#scenCompare td{padding:9px 11px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--line);}
+  #scenCompare thead th{background:#F3F1EA;font-family:"Inter",sans-serif;font-weight:700;color:var(--ink);text-align:right;}
+  #scenCompare tbody th{text-align:left;font-weight:500;color:var(--muted);font-family:"Inter",sans-serif;background:#FBFBF7;position:sticky;left:0;}
+  #scenCompare td{font-family:"JetBrains Mono",monospace;color:var(--ink);}
+  #scenCompare tr:last-child td,#scenCompare tr:last-child th{border-bottom:none;}
+
+  /* Printable summary (hidden on screen, shown only when printing/saving PDF) */
+  .print-only{display:none;}
+  @media print{
+    body{background:#fff !important;padding:16px !important;background-image:none !important;}
+    .wrap{display:none !important;}
+    .print-only{display:block;color:#111;font-family:Inter,Arial,sans-serif;}
+    .print-only h1{font-size:20px;margin:0 0 2px;color:#15503C;}
+    .print-only .p-sub{font-size:11px;color:#555;margin:0 0 14px;}
+    .print-only h2{font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#777;margin:16px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px;}
+    .print-only table{width:100%;border-collapse:collapse;font-size:12.5px;}
+    .print-only td{padding:5px 0;border-bottom:1px solid #eee;}
+    .print-only td:last-child{text-align:right;font-weight:700;font-family:"JetBrains Mono",monospace;}
+    .print-only .p-foot{font-size:10px;color:#888;margin-top:18px;}
+  }
 </style>
 </head>
 <body>
@@ -613,6 +665,21 @@
         </div>
       </div>
 
+      <div class="tools">
+        <p class="col-title" style="color:var(--muted);margin-top:4px;">Save · compare · share</p>
+        <div class="tool-btns">
+          <button id="btnSave" class="tbtn primary" type="button">＋ Save scenario</button>
+          <button id="btnShare" class="tbtn" type="button">Share</button>
+          <button id="btnPdf" class="tbtn" type="button">Save PDF</button>
+        </div>
+        <div id="scenEmpty" class="scen-empty">No saved scenarios yet — tap <b>Save scenario</b> to keep the current inputs and compare options side by side.</div>
+        <div id="scenList" class="scen-list"></div>
+        <div id="scenCompareWrap" class="scen-compare-wrap" style="display:none;">
+          <div class="scen-compare-title">Comparison</div>
+          <div class="scen-compare-scroll"><table id="scenCompare"></table></div>
+        </div>
+      </div>
+
       <div class="notes">
         <b>How this is worked out</b>
         <ul>
@@ -628,6 +695,9 @@
   </div>
   <p class="credit">VC EVALUATOR · NIGERIA RSA</p>
 </div>
+
+<div id="printArea" class="print-only"></div>
+
 
 <script>
 (function(){
@@ -669,6 +739,8 @@
   };
 
   // ---- compute + render ----
+  var lastD = null;
+
   function compute(){
     var C = state.amt;
     var r = state.ret / 100;
@@ -862,6 +934,8 @@
     el.durEcho.textContent = "= " + Math.round(d.days) + " days · 91-day lock " +
       (d.days>=91?"cleared":"not cleared") + " · 12-month tax-free " +
       (d.monthsExact>=12?"reached":"not reached");
+
+    lastD = d;
   }
 
   // ---- input wiring ----
@@ -911,6 +985,220 @@
       compute();
     });
   });
+
+  // ===== Save · compare · share =====
+  var SKEY = 'vc_scenarios_v1';
+
+  function loadScenarios(){
+    try { return JSON.parse(localStorage.getItem(SKEY) || '[]'); }
+    catch(e){ return (window.__vcScen || []); }
+  }
+  function storeScenarios(arr){
+    window.__vcScen = arr; // in-memory fallback (e.g. sandboxed preview)
+    try { localStorage.setItem(SKEY, JSON.stringify(arr)); } catch(e){}
+  }
+
+  // recovered against deposit, mirroring the recovery card
+  function recoveredPct(d){
+    if(!d || d.C <= 0) return 0;
+    var rec = d.taxSaved + (d.eligible ? d.withdrawalAmt : 0);
+    return rec / d.C;
+  }
+
+  function snapshot(){
+    if(!lastD) return null;
+    var d = lastD;
+    return {
+      amt:d.C, taxSaved:d.taxSaved, income:d.income, pot:d.pot,
+      withdrawalAmt:d.withdrawalAmt, netCash:d.netCash, valueCreated:d.valueCreated,
+      valuePct:d.valuePct, recPct:recoveredPct(d),
+      // inputs to restore
+      rate:state.rate, ret:state.ret, infl:state.infl, dur:state.dur,
+      durUnit:state.durUnit, withdrawPct:state.withdrawPct,
+      months:d.monthsExact, taxFree:d.taxFree, eligible:d.eligible
+    };
+  }
+
+  function saveScenario(){
+    var s = snapshot();
+    if(!s) return;
+    var def = naira(s.amt).replace('₦','₦') + ' · ' + Math.round(s.months) + 'mo';
+    var name;
+    try { name = window.prompt('Name this scenario', def); }
+    catch(e){ name = def; }
+    if(name === null) return;              // cancelled
+    name = (name || def).trim().slice(0,40);
+    var arr = loadScenarios();
+    arr.push({ id:'s'+Date.now(), name:name, ts:Date.now(), s:s });
+    storeScenarios(arr);
+    renderScenarios();
+  }
+
+  function deleteScenario(id){
+    storeScenarios(loadScenarios().filter(function(x){ return x.id !== id; }));
+    renderScenarios();
+  }
+
+  function loadScenarioInputs(sc){
+    var s = sc.s;
+    state.rate = s.rate; state.ret = s.ret; state.infl = s.infl;
+    state.dur = s.dur; state.durUnit = s.durUnit; state.amt = s.amt;
+    state.withdrawPct = s.withdrawPct;
+    // reflect in the UI controls
+    el.amt.value = fmtThousands(s.amt);
+    el.rate.value = s.rate;
+    el.ret.value = s.ret; el.retRange.value = Math.min(35, Math.max(0, s.ret));
+    el.infl.value = s.infl; el.inflRange.value = Math.min(40, Math.max(0, s.infl));
+    el.dur.value = s.dur;
+    el.wRange.value = s.withdrawPct;
+    document.querySelectorAll('#durUnit button').forEach(function(b){
+      b.classList.toggle('on', b.dataset.u === s.durUnit);
+    });
+    compute();
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }
+
+  function renderScenarios(){
+    var arr = loadScenarios();
+    var list = document.getElementById('scenList');
+    var empty = document.getElementById('scenEmpty');
+    var cmpWrap = document.getElementById('scenCompareWrap');
+    list.innerHTML = '';
+    empty.style.display = arr.length ? 'none' : 'block';
+
+    arr.forEach(function(sc){
+      var row = document.createElement('div');
+      row.className = 'scen-row';
+      var main = document.createElement('div');
+      main.className = 'sc-main';
+      main.innerHTML = '<div class="sc-name"></div><div class="sc-sub"></div>';
+      main.querySelector('.sc-name').textContent = sc.name;
+      main.querySelector('.sc-sub').textContent =
+        naira(sc.s.amt) + ' · ' + (sc.s.rate) + '% tax · ' + Math.round(sc.s.months) + 'mo';
+      main.addEventListener('click', function(){ loadScenarioInputs(sc); });
+
+      var val = document.createElement('div');
+      val.className = 'sc-val';
+      val.innerHTML = naira(sc.s.valueCreated) + '<br><span style="font-weight:400;color:var(--muted)">value</span>';
+
+      var del = document.createElement('button');
+      del.className = 'sc-del'; del.type = 'button'; del.textContent = '×';
+      del.setAttribute('aria-label','Delete scenario');
+      del.addEventListener('click', function(e){ e.stopPropagation(); deleteScenario(sc.id); });
+
+      row.appendChild(main); row.appendChild(val); row.appendChild(del);
+      list.appendChild(row);
+    });
+
+    // comparison table (>=2 scenarios)
+    if(arr.length >= 2){
+      cmpWrap.style.display = 'block';
+      var rows = [
+        ['Contribution', function(s){ return naira(s.amt); }],
+        ['Tax saved', function(s){ return naira(s.taxSaved); }],
+        ['Income', function(s){ return naira(s.income); }],
+        ['Max withdrawal', function(s){ return naira(s.withdrawalAmt); }],
+        ['Net cash', function(s){ return naira(s.netCash); }],
+        ['Value created', function(s){ return naira(s.valueCreated); }],
+        ['Recovered', function(s){ return Math.round(s.recPct*100) + '%'; }]
+      ];
+      var html = '<thead><tr><th>Metric</th>';
+      arr.forEach(function(sc){ html += '<th>' + escapeHtml(sc.name) + '</th>'; });
+      html += '</tr></thead><tbody>';
+      rows.forEach(function(r){
+        html += '<tr><th>' + r[0] + '</th>';
+        arr.forEach(function(sc){ html += '<td>' + r[1](sc.s) + '</td>'; });
+        html += '</tr>';
+      });
+      html += '</tbody>';
+      document.getElementById('scenCompare').innerHTML = html;
+    } else {
+      cmpWrap.style.display = 'none';
+    }
+  }
+
+  function escapeHtml(t){
+    return String(t).replace(/[&<>"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+    });
+  }
+
+  // ---- share summary (native iOS share sheet) ----
+  function summaryText(){
+    if(!lastD) return '';
+    var d = lastD;
+    var mo = Math.round(d.monthsExact);
+    var lines = [
+      'VC Evaluator — Nigerian RSA',
+      'Contribution: ' + naira(d.C),
+      'Marginal tax ' + state.rate + '% · return ' + state.ret + '% · inflation ' + state.infl + '%',
+      'Horizon: ' + mo + ' months (' + (d.taxFree ? 'tax-free' : 'income taxable') + ')',
+      '',
+      'Tax saved: ' + naira(d.taxSaved),
+      'Income earned: ' + naira(d.income),
+      'Pot at withdrawal: ' + naira(d.pot),
+      'Withdraw ' + Math.round(d.w*100) + '%: ' + naira(d.withdrawalAmt) +
+        (d.earlyTax>0 ? ' (tax ' + naira(d.earlyTax) + ')' : '') + ' → net ' + naira(d.netCash),
+      'Total value created: ' + naira(d.valueCreated) + ' (+' + Math.round(d.valuePct*100) + '% of VC)',
+      'Recovered: ' + Math.round(recoveredPct(d)*100) + '% of deposit',
+      '',
+      'Basis: Nigeria Tax Act, 2025. Estimates only, not advice.'
+    ];
+    return lines.join('\n');
+  }
+
+  function shareSummary(){
+    var text = summaryText();
+    if(navigator.share){
+      navigator.share({ title:'VC Evaluation', text:text }).catch(function(){});
+    } else if(navigator.clipboard){
+      navigator.clipboard.writeText(text).then(function(){ alert('Summary copied to clipboard.'); },
+        function(){ alert(text); });
+    } else {
+      alert(text);
+    }
+  }
+
+  // ---- save as PDF (via native print → Save to Files) ----
+  function buildPrint(){
+    if(!lastD) return;
+    var d = lastD;
+    var rows = [
+      ['Voluntary contribution', naira(d.C)],
+      ['Marginal tax rate', state.rate + '%'],
+      ['Expected annual return', state.ret + '%'],
+      ['Inflation rate', state.infl + '%'],
+      ['Holding period', Math.round(d.monthsExact) + ' months (' + (d.taxFree?'tax-free':'income taxable') + ')'],
+      ['—', ''],
+      ['Tax saved on contribution', naira(d.taxSaved)],
+      ['Income earned', naira(d.income)],
+      ['Pot at withdrawal', naira(d.pot)],
+      ['Withdrawal (' + Math.round(d.w*100) + '%)', naira(d.withdrawalAmt)],
+      ['Tax on withdrawal', d.earlyTax>0 ? '−'+naira(d.earlyTax) : naira(0)],
+      ['Net cash from withdrawal', naira(d.netCash)],
+      ['Total value created', naira(d.valueCreated) + '  (+' + Math.round(d.valuePct*100) + '% of VC)'],
+      ['Recovered of deposit', Math.round(recoveredPct(d)*100) + '%']
+    ];
+    var body = rows.map(function(r){
+      if(r[0]==='—') return '<tr><td colspan="2" style="border:none;height:6px"></td></tr>';
+      return '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>';
+    }).join('');
+    document.getElementById('printArea').innerHTML =
+      '<h1>Voluntary Contribution — Evaluation</h1>' +
+      '<p class="p-sub">Nigerian RSA · generated ' + new Date().toLocaleDateString() + '</p>' +
+      '<h2>Summary</h2><table>' + body + '</table>' +
+      '<p class="p-foot">Basis: Nigeria Tax Act, 2025 (effective 1 January 2026). ' +
+      'Estimates only — not financial or tax advice. Confirm specifics with your PFA.</p>';
+  }
+
+  document.getElementById('btnSave').addEventListener('click', saveScenario);
+  document.getElementById('btnShare').addEventListener('click', shareSummary);
+  document.getElementById('btnPdf').addEventListener('click', function(){
+    buildPrint();
+    setTimeout(function(){ window.print(); }, 60);
+  });
+
+  renderScenarios();
 
   // init
   el.amt.value = fmtThousands(state.amt);

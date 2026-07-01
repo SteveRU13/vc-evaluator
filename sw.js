@@ -1,5 +1,5 @@
 // Simple offline cache for the VC Evaluator app.
-const CACHE = 'vc-evaluator-v1';
+const CACHE = 'vc-evaluator-v2';
 const ASSETS = [
   'index.html',
   'manifest.webmanifest',
