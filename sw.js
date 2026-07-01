@@ -1,15 +1,21 @@
 // Simple offline cache for the VC Evaluator app.
-const CACHE = 'vc-evaluator-v2';
+const CACHE = 'vc-evaluator-v3';
 const ASSETS = [
   'index.html',
   'manifest.webmanifest',
+  'jspdf.umd.min.js',
   'icon-180.png',
   'icon-192.png',
   'icon-512.png'
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE).then((c) =>
+      // cache each asset independently so one missing file can't break install
+      Promise.allSettled(ASSETS.map((a) => c.add(a)))
+    ).then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
